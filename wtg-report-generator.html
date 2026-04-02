@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WTG Stoppage Report Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: slideDown 0.6s ease;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            color: #60a5fa;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(96, 165, 250, 0.3);
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 0.95em;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.8s ease;
+        }
+
+        .panel h2 {
+            color: #60a5fa;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel h2::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: #60a5fa;
+            border-radius: 2px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #cbd5e1;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        input[type="file"],
+        select {
+            width: 100%;
+            padding: 12px;
+            background: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        input[type="file"]:hover,
+        select:hover {
+            border-color: #60a5fa;
+            box-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        }
+
+        button.secondary:hover {
+            box-shadow: 0 8px 20px rgba(107, 114, 128, 0.4);
+        }
+
+        .filter-section {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: #1e293b;
+            border: 2px solid #334155;
+            color: #cbd5e1;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .filter-btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+        }
+
+        .data-display {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .data-item {
+            background: #1e293b;
+            padding: 12px;
+            border-left: 4px solid #3b82f6;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #cbd5e1;
+        }
+
+        .data-item strong {
+            color: #60a5fa;
+        }
+
+        .report-section {
+            margin-bottom: 25px;
+        }
+
+        .report-output {
+            background: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #d1d5db;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 15px;
+        }
+
+        .copy-btn {
+            background: #10b981;
+            font-size: 0.85em;
+            padding: 8px 12px;
+        }
+
+        .copy-btn:hover {
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: #1e293b;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #60a5fa;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.85em;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            color: #60a5fa;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-loaded {
+            background: #10b981;
+        }
+
+        .status-empty {
+            background: #ef4444;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #60a5fa;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+        }
+
+        .location-group {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #1e293b;
+            border-left: 4px solid #60a5fa;
+            border-radius: 4px;
+        }
+
+        .location-group-title {
+            color: #60a5fa;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .wtg-entry {
+            padding: 8px;
+            background: #0f172a;
+            margin-bottom: 6px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            color: #cbd5e1;
+        }
+
+        .error-message {
+            background: #7f1d1d;
+            border: 1px solid #dc2626;
+            color: #fca5a5;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .success-message {
+            background: #064e3b;
+            border: 1px solid #10b981;
+            color: #a7f3d0;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .timestamp {
+            color: #64748b;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ WTG Stoppage Report Generator</h1>
+            <p>Multi-Terminal Wind Farm Operations Dashboard | Tamil Nadu Regional Monitoring</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Left Panel: Upload & Configuration -->
+            <div class="panel">
+                <h2>Data Upload & Config</h2>
+
+                <div class="form-group">
+                    <label>📊 Upload Master Data (Excel)</label>
+                    <input type="file" id="masterDataFile" accept=".xlsx,.xls" />
+                </div>
+
+                <div class="form-group">
+                    <label>📁 Upload Area MSR Sheets (Multiple)</label>
+                    <input type="file" id="areaFilesInput" accept=".xlsx,.xls" multiple />
+                </div>
+
+                <button onclick="loadAllData()">Load All Data</button>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Master Data</div>
+                        <div class="stat-value"><span class="status-indicator status-empty" id="masterStatus"></span><span id="masterCount">0</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">WTG Records</div>
+                        <div class="stat-value"><span class="status-indicator status-empty" id="wtgStatus"></span><span id="wtgCount">0</span></div>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <label>Report Type</label>
+                    <div class="filter-controls">
+                        <button class="filter-btn active" onclick="switchReport('above6')">Above 6 Hrs</button>
+                        <button class="filter-btn" onclick="switchReport('above10')">Above 10 Hrs</button>
+                        <button class="filter-btn" onclick="switchReport('minor')">Minor >10hr</button>
+                    </div>
+                </div>
+
+                <button onclick="generateReports()" class="secondary">🔄 Generate Reports</button>
+
+                <div id="loadingStatus" style="display: none; color: #60a5fa; text-align: center; margin-top: 10px;">
+                    <p>Loading & Processing...</p>
+                </div>
+            </div>
+
+            <!-- Right Panel: Data Preview & Stats -->
+            <div class="panel">
+                <h2>Data Preview & Statistics</h2>
+
+                <div id="errorContainer"></div>
+                <div id="successContainer"></div>
+
+                <div class="filter-section">
+                    <label>Filter by Location</label>
+                    <select id="locationFilter" onchange="updatePreview()">
+                        <option value="">All Locations</option>
+                        <option value="Bogampatti">Bogampatti</option>
+                        <option value="Devarkulam">Devarkulam</option>
+                        <option value="Muthayampatty">Muthayampatty</option>
+                        <option value="Radhapuram">Radhapuram</option>
+                        <option value="Viliseri">Viliseri</option>
+                    </select>
+                </div>
+
+                <div class="data-display" id="dataPreview">
+                    <div style="text-align: center; color: #64748b;">
+                        <p>Load Excel files to preview data...</p>
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Above 6 Hrs</div>
+                        <div class="stat-value" id="above6Count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Above 10 Hrs</div>
+                        <div class="stat-value" id="above10Count">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Output Section -->
+        <div class="panel">
+            <h2>Generated Reports</h2>
+
+            <div class="filter-section">
+                <label>Current Report: <strong id="currentReportType">Above 6 Hrs - State Head Format</strong></label>
+            </div>
+
+            <div class="report-section">
+                <div class="report-output" id="reportOutput">
+                    <div style="text-align: center; color: #64748b;">
+                        <p>Report will appear here after clicking "Generate Reports"</p>
+                        <p style="margin-top: 10px; font-size: 0.85em;">Load your Excel files and configure filters above</p>
+                    </div>
+                </div>
+                <button class="copy-btn" onclick="copyReport()">📋 Copy Report to Clipboard</button>
+                <button class="copy-btn" onclick="downloadAsText()">⬇️ Download as Text File</button>
+            </div>
+
+            <div class="timestamp" id="timestamp"></div>
+        </div>
+    </div>
+
+    <script>
+        let masterData = [];
+        let allWTGData = [];
+        let currentReport = 'above6';
+        let currentReportContent = '';
+
+        const locationNames = ['Bogampatti', 'Devarkulam', 'Muthayampatty', 'Radhapuram', 'Viliseri'];
+
+        function showError(msg) {
+            const container = document.getElementById('errorContainer');
+            container.innerHTML = `<div class="error-message">❌ ${msg}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000);
+        }
+
+        function showSuccess(msg) {
+            const container = document.getElementById('successContainer');
+            container.innerHTML = `<div class="success-message">✅ ${msg}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000);
+        }
+
+        function setLoading(isLoading) {
+            document.getElementById('loadingStatus').style.display = isLoading ? 'block' : 'none';
+        }
+
+        function parseExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                        const result = {};
+                        workbook.SheetNames.forEach(sheetName => {
+                            result[sheetName] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                        });
+                        resolve(result);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.readAsBinaryString(file);
+            });
+        }
+
+        async function loadAllData() {
+            setLoading(true);
+            document.getElementById('errorContainer').innerHTML = '';
+            document.getElementById('successContainer').innerHTML = '';
+
+            try {
+                // Load Master Data
+                const masterFile = document.getElementById('masterDataFile').files[0];
+                if (!masterFile) {
+                    throw new Error('Please select Master Data file');
+                }
+
+                const masterSheets = await parseExcelFile(masterFile);
+                // Assuming first sheet has master data
+                const masterSheet = Object.values(masterSheets)[0];
+                masterData = masterSheet || [];
+
+                document.getElementById('masterCount').textContent = masterData.length;
+                document.getElementById('masterStatus').className = 'status-indicator status-loaded';
+
+                // Load Area Files
+                const areaFiles = document.getElementById('areaFilesInput').files;
+                if (areaFiles.length === 0) {
+                    throw new Error('Please select at least one Area MSR file');
+                }
+
+                allWTGData = [];
+                for (let file of areaFiles) {
+                    const areaSheets = await parseExcelFile(file);
+                    // Get main data sheet (usually first sheet)
+                    const areaData = Object.values(areaSheets)[0] || [];
+                    allWTGData = allWTGData.concat(areaData);
+                }
+
+                document.getElementById('wtgCount').textContent = allWTGData.length;
+                document.getElementById('wtgStatus').className = 'status-indicator status-loaded';
+
+                updateStats();
+                updatePreview();
+                showSuccess(`Loaded ${masterData.length} Master Records & ${allWTGData.length} WTG Records`);
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function updateStats() {
+            const above6 = allWTGData.filter(w => {
+                const hrs = parseHours(w);
+                return hrs >= 6;
+            }).length;
+
+            const above10 = allWTGData.filter(w => {
+                const hrs = parseHours(w);
+                return hrs >= 10;
+            }).length;
+
+            document.getElementById('above6Count').textContent = above6;
+            document.getElementById('above10Count').textContent = above10;
+        }
+
+        function parseHours(wtg) {
+            // Parse hours from various column formats
+            const keys = Object.keys(wtg);
+            for (let key of keys) {
+                if (key.toLowerCase().includes('hour') || key.toLowerCase().includes('hrs') || 
+                    key.toLowerCase().includes('duration') || key.toLowerCase().includes('stop')) {
+                    const val = wtg[key];
+                    if (typeof val === 'number') return val;
+                    if (typeof val === 'string') {
+                        const num = parseFloat(val);
+                        return isNaN(num) ? 0 : num;
+                    }
+                }
+            }
+            return 0;
+        }
+
+        function updatePreview() {
+            const locationFilter = document.getElementById('locationFilter').value;
+            let filtered = allWTGData;
+
+            if (locationFilter) {
+                filtered = filtered.filter(w => {
+                    const keys = Object.keys(w);
+                    const locationKey = keys.find(k => k.toLowerCase().includes('location') || k.toLowerCase().includes('site') || k.toLowerCase().includes('terminal'));
+                    return locationKey ? String(w[locationKey]).includes(locationFilter) : false;
+                });
+            }
+
+            const preview = document.getElementById('dataPreview');
+            if (filtered.length === 0) {
+                preview.innerHTML = '<div style="text-align: center; color: #64748b;">No data matches filter</div>';
+                return;
+            }
+
+            let html = '';
+            const grouped = {};
+            filtered.forEach(w => {
+                const keys = Object.keys(w);
+                const locKey = keys.find(k => k.toLowerCase().includes('location') || k.toLowerCase().includes('site') || k.toLowerCase().includes('terminal')) || 'Unknown';
+                const location = String(w[locKey] || 'Unknown');
+                if (!grouped[location]) grouped[location] = [];
+                grouped[location].push(w);
+            });
+
+            for (let loc in grouped) {
+                html += `<div class="location-group">
+                    <div class="location-group-title">📍 ${loc} (${grouped[loc].length})</div>`;
+                grouped[loc].slice(0, 5).forEach(w => {
+                    const wtgKey = Object.keys(w)[0];
+                    const hours = parseHours(w);
+                    const status = hours >= 10 ? '🔴' : hours >= 6 ? '🟡' : '🟢';
+                    html += `<div class="wtg-entry">${status} ${w[wtgKey]} - ${hours}h</div>`;
+                });
+                if (grouped[loc].length > 5) {
+                    html += `<div style="color: #64748b; font-size: 0.8em;">... +${grouped[loc].length - 5} more</div>`;
+                }
+                html += '</div>';
+            }
+
+            preview.innerHTML = html;
+        }
+
+        function switchReport(reportType) {
+            currentReport = reportType;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const labels = {
+                'above6': 'Above 6 Hrs - State Head Format',
+                'above10': 'Above 10 Hrs - CEO Format',
+                'minor': 'Above 10 Hrs - Minor BD Report'
+            };
+            document.getElementById('currentReportType').textContent = labels[reportType];
+            generateReports();
+        }
+
+        function generateReports() {
+            if (allWTGData.length === 0) {
+                showError('No data loaded. Please upload Excel files first.');
+                return;
+            }
+
+            let filtered = allWTGData;
+
+            if (currentReport === 'above6') {
+                filtered = allWTGData.filter(w => parseHours(w) >= 6);
+                currentReportContent = generateStateHeadReport(filtered);
+            } else if (currentReport === 'above10') {
+                filtered = allWTGData.filter(w => parseHours(w) >= 10);
+                currentReportContent = generateCEOReport(filtered);
+            } else if (currentReport === 'minor') {
+                filtered = allWTGData.filter(w => parseHours(w) >= 10);
+                currentReportContent = generateMinorBDReport(filtered);
+            }
+
+            document.getElementById('reportOutput').textContent = currentReportContent;
+            updateTimestamp();
+        }
+
+        function generateStateHeadReport(data) {
+            let report = `TN Above 06 Hrs Stoppage WTGS Status\n`;
+            report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            report += `Date : ${new Date().toLocaleDateString('en-GB')}\n`;
+            report += `Time : ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}\n`;
+            report += `Total WTG's : ${data.length}\n\n`;
+
+            const grouped = groupByLocation(data);
+            let counter = 1;
+
+            for (let location of locationNames) {
+                if (!grouped[location] || grouped[location].length === 0) continue;
+
+                report += `${location}\n`;
+                report += `${'-'.repeat(40)}\n\n`;
+
+                grouped[location].forEach((wtg, idx) => {
+                    const wtgKey = Object.keys(wtg)[0];
+                    const wtgName = wtg[wtgKey] || `WTG-${idx}`;
+                    const issue = wtg['Issue'] || wtg['Fault'] || 'Unknown Issue';
+                    const capacity = lookupCapacity(wtgName);
+                    const stoppageDate = wtg['Date'] || wtg['Stoppage Date'] || new Date().toLocaleDateString('en-GB');
+                    const company = wtg['Company'] || wtg['Customer'] || 'TBD';
+                    const hours = parseHours(wtg);
+
+                    report += `${counter}. ${wtgName} _ ${issue} _ ${capacity} _ ${stoppageDate} _ ${company}\n`;
+                    counter++;
+                });
+
+                report += '\n';
+            }
+
+            report += `\nFeeder Status (BD/LC)\n`;
+            report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            report += `Feeder BD : Count [ WTGs]\n`;
+            report += `Feeder LC : Count [ WTGs ]\n\n`;
+            report += `[Insert Feeder Data from MSR sheets]\n`;
+
+            return report;
+        }
+
+        function generateCEOReport(data) {
+            let report = `Mr. CEO Sir - URGENT Intervention Required\n`;
+            report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            report += `Above 10 Hrs WTGs Status\n`;
+            report += `Date : ${new Date().toLocaleDateString('en-GB')}\n`;
+            report += `Time : ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}\n`;
+            report += `Total WTG's : ${data.length}\n\n`;
+
+            const sorted = data.sort((a, b) => parseHours(b) - parseHours(a));
+
+            sorted.forEach((wtg, idx) => {
+                const wtgKey = Object.keys(wtg)[0];
+                const wtgName = wtg[wtgKey];
+                const location = getLocation(wtg);
+                const issue = wtg['Issue'] || wtg['Fault'] || 'Unknown';
+                const hours = parseHours(wtg);
+                const etr = wtg['ETR'] || wtg['Expected Time to Restore'] || new Date().toLocaleDateString('en-GB');
+
+                report += `${idx + 1}. ${wtgName} _ ${location} _ ${issue} _ ${hours} Hrs _ ETR: ${etr}\n`;
+            });
+
+            report += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            report += `Immediate Action Required on Above Units\n`;
+
+            return report;
+        }
+
+        function generateMinorBDReport(data) {
+            let report = `TN Above 10 Hrs WTGs Status - Minor BD Report\n`;
+            report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            report += `Total WTG's : ${data.length}\n\n`;
+
+            const grouped = groupByLocation(data);
+            let counter = 1;
+
+            for (let location of locationNames) {
+                if (!grouped[location] || grouped[location].length === 0) continue;
+
+                report += `${location}\n`;
+                report += `${'─'.repeat(40)}\n`;
+
+                grouped[location].forEach((wtg) => {
+                    const wtgKey = Object.keys(wtg)[0];
+                    const wtgName = wtg[wtgKey];
+                    const issue = wtg['Issue'] || wtg['Fault'] || 'Unknown';
+                    const hours = parseHours(wtg);
+                    const etr = wtg['ETR'] || new Date().toLocaleDateString('en-GB');
+
+                    report += `${counter}. ${wtgName} _ ${location} _ ${issue} _ ${hours} Hrs _ ETR: ${etr}\n`;
+                    counter++;
+                });
+
+                report += '\n';
+            }
+
+            report += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            report += `Status: Monitoring Active | Updates: Real-time\n`;
+
+            return report;
+        }
+
+        function groupByLocation(data) {
+            const grouped = {};
+            locationNames.forEach(loc => grouped[loc] = []);
+
+            data.forEach(wtg => {
+                const location = getLocation(wtg);
+                if (grouped[location] === undefined) {
+                    grouped[location] = [];
+                }
+                grouped[location].push(wtg);
+            });
+
+            return grouped;
+        }
+
+        function getLocation(wtg) {
+            const keys = Object.keys(wtg);
+            const locKey = keys.find(k => 
+                k.toLowerCase().includes('location') || 
+                k.toLowerCase().includes('site') || 
+                k.toLowerCase().includes('terminal') ||
+                k.toLowerCase().includes('area')
+            );
+            return locKey ? String(wtg[locKey]) : 'Unknown';
+        }
+
+        function lookupCapacity(wtgName) {
+            // Look up capacity from master data
+            const match = masterData.find(m => {
+                const keys = Object.keys(m);
+                return keys.some(k => String(m[k]).includes(wtgName));
+            });
+            
+            if (match) {
+                const capacityKey = Object.keys(match).find(k => 
+                    k.toLowerCase().includes('capacity') || 
+                    k.toLowerCase().includes('power') || 
+                    k.toLowerCase().includes('mw')
+                );
+                return capacityKey ? match[capacityKey] : '1250';
+            }
+            return '1250'; // Default capacity
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('timestamp').textContent = 
+                `Last Generated: ${now.toLocaleString('en-GB')}`;
+        }
+
+        function copyReport() {
+            if (!currentReportContent) {
+                showError('Generate a report first');
+                return;
+            }
+            navigator.clipboard.writeText(currentReportContent).then(() => {
+                showSuccess('Report copied to clipboard! Ready to paste in WhatsApp/Telegram');
+            });
+        }
+
+        function downloadAsText() {
+            if (!currentReportContent) {
+                showError('Generate a report first');
+                return;
+            }
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(currentReportContent));
+            element.setAttribute('download', `WTG_Report_${currentReport}_${new Date().getTime()}.txt`);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+            showSuccess('Report downloaded as text file');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateTimestamp();
+        });
+    </script>
+</body>
+</html>
